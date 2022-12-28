@@ -13,7 +13,6 @@ class Book(models.Model):
     isbn = models.CharField('ISBN', max_length=13, help_text='13 Character <a href="https://www.isbn-international.org/content/what-isbn">ISBN number</a>')
     category = models.CharField(max_length=200)
     desc = models.TextField()
-    isReturned = models.BooleanField(default=False)
     
     class Meta:
         ordering = ['-pubYear']
@@ -37,7 +36,7 @@ class Borrowing(models.Model):
     user = models.ForeignKey('User', to_field='username', on_delete=models.SET_NULL, null=True)
     startDate = models.DateField()
     endDate = models.DateField()
-    isReturned = models.BooleanField()
+    isReturned = models.BooleanField(default=False)
     class Meta:
         ordering = ['endDate']
             

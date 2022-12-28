@@ -19,7 +19,7 @@ class UserSerializer(serializers.ModelSerializer):
 class BorrowingListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Borrowing
-        fields = ['id', 'book', 'startDate', 'endDate']
+        fields = ['id', 'book', 'startDate', 'endDate', 'isReturned']
         
 class BorrowingDetailSerializer(serializers.ModelSerializer):
     class Meta:
@@ -29,12 +29,11 @@ class BorrowingDetailSerializer(serializers.ModelSerializer):
     def validate(self, data):
         if data['startDate'] > data['endDate']:
             raise serializers.ValidationError("finish must occur after start")
-        books = Borrowing.objects.filter(book=data['book'])
-        print(books[0])
+        books = Borrowing.objects.filter(book=data['book']).values('startDate', 'endDate')
         for book in books:
-            pass
-            # if (data['startDate'] >= book["startDate"] and data['startDate'] <= book["endDate"]) or (data['endDate'] >= book["startDate"] and data['endDate'] <= book["endDate"]):
-            #    raise serializers.ValidationError("Book is not available at inputed dates") 
+            print(book)
+            if (data['startDate'] >= book["startDate"] and data['startDate'] <= book["endDate"]) or (data['endDate'] >= book["startDate"] and data['endDate'] <= book["endDate"]):
+               raise serializers.ValidationError("Book is not available at inputed dates") 
         return data
 
 class HighlightSerializer(serializers.ModelSerializer):
