@@ -47,4 +47,4 @@ class BorrowedBookSerializer(serializers.ModelSerializer):
     book = BookListSerializer(many=False, read_only=True)
     class Meta:
         model = Borrowing
-        fields = ["id", "endDate", "book"]
+        fields = ["id", "endDate", "book", "isReturned"]

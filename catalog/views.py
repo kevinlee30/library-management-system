@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from rest_framework.parsers import JSONParser
 
-from rest_framework import status, generics, filters
+from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.reverse import reverse_lazy
@@ -22,7 +22,6 @@ class home(APIView):
             "Book List": reverse_lazy("book-list", request=request),
             "User List": reverse_lazy("user-list", request=request),
             "Borrowing List": reverse_lazy("borrowing-list", request=request),
-            # "Book Detail": reverse_lazy("book-detail", request=request),
         })
 
 @api_view(['GET'])
@@ -48,7 +47,7 @@ def BookListView(request):
             numLim = int(paramsDict.get("num"))
         
         if "search" in paramsDict:
-            books = Book.objects.filter(Q(title__icontains=paramsDict.get("search")) | Q(author__icontains=paramsDict.get("search"))).order_by("-pubYear")[:numLim]
+            books = Book.objects.filter(Q(title__icontains=paramsDict.get("search")) | Q(author__icontains=paramsDict.get("search")) | Q(isbn=paramsDict.get("search"))).order_by("-pubYear")[:numLim]
         elif "cat" in paramsDict:
             books = Book.objects.filter(
                 category = paramsDict.get("cat")
@@ -107,6 +106,9 @@ def BorrowingListView(request):
         serializer = BorrowingDetailSerializer(data = request.data)
         if serializer.is_valid():
             serializer.save()
+            book = Book.objects.get(id=serializer.data['book'])
+            book.borrowed += 1
+            book.save(update_fields=['borrowed'])
             return Response(serializer.data, status=status.HTTP_201_CREATED)
             
         else:

@@ -39,9 +39,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'catalog.apps.CatalogConfig',
+    'recsys.apps.RecsysConfig',
     'rest_framework',
     "corsheaders",
-    'django_filters',
+    'django_extensions',
 ]
 
 REST_FRAMEWORK = {
