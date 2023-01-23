@@ -1,5 +1,7 @@
 from django.db import models
+from django.contrib.auth.models import AbstractUser
 from django.urls import reverse
+from django.conf import settings
 import uuid
 
 # Create your models here.
@@ -21,9 +23,13 @@ class Book(models.Model):
     def __str__(self):
         return f'{self.title} ({self.author})'
     
-class User(models.Model):
+class User(AbstractUser):
     username = models.CharField(max_length=200, unique=True)
     email = models.CharField(max_length=200, unique=True)
+    password = models.CharField(max_length=200, default=uuid.uuid4)
+    
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["username"]
     
     class Meta:
         ordering = ['username']
@@ -34,7 +40,7 @@ class User(models.Model):
 class Borrowing(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     book = models.ForeignKey('Book', to_field='id', on_delete=models.SET_NULL, null=True)
-    user = models.ForeignKey('User', to_field='username', on_delete=models.SET_NULL, null=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, to_field='username', on_delete=models.CASCADE, null=True)
     startDate = models.DateField()
     endDate = models.DateField()
     isReturned = models.BooleanField(default=False)
@@ -51,7 +57,7 @@ class Highlight(models.Model):
         on_delete=models.CASCADE,
         primary_key=True,
     )
-    imgUrl = imgUrl = models.CharField('Image URL', max_length=200)
+    imgUrl = models.CharField('Image URL', max_length=200)
     
     def __str__(self):
         return f'{self.book.title}: {self.title}'

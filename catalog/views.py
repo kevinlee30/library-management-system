@@ -6,8 +6,11 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.reverse import reverse_lazy
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
+from rest_framework.exceptions import AuthenticationFailed
 from django.db.models import Q
+import jwt, datetime
 
 from .models import *
 from .serializers import *
@@ -69,14 +72,22 @@ def BookDetailView(request, id):
         serializer = BookDetailSerializer(book)
         return Response(serializer.data, status = status.HTTP_200_OK)
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 def UserListView(request):
     if request.method == 'GET':
         users = User.objects.all()
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data, status = status.HTTP_200_OK)
+    
+    if request.method == 'POST':
+        serializer = AuthUserSerializer(data = request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)     
+        else:
+            return Response("400 INVALID REQUEST", status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['GET'])   
+@api_view(['GET', 'DELETE'])   
 def UserDetailView(request, username):
     try:
         user = User.objects.get(username=username)
@@ -86,8 +97,54 @@ def UserDetailView(request, username):
     if request.method == 'GET':
         serializer = UserSerializer(user)
         return Response(serializer.data, status = status.HTTP_200_OK)
+    
+    elif request.method == 'DELETE':
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+@api_view(['POST'])
+def LoginView(request):
+    if request.method == 'POST':
+        email = request.data["email"]
+        password = request.data["password"]
+        
+        user = User.objects.filter(email=email).first()
+        
+        if user is None:
+            raise AuthenticationFailed("User not Found")
+        if not user.check_password(password):
+            raise AuthenticationFailed("Incorrect Password")
+        
+        payload = {
+            "id": user.id,
+            "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=30),
+            "iat": datetime.datetime.utcnow()
+        }
+        
+        token = jwt.encode(payload, "secret", algorithm='HS256').decode('utf-8')
+        
+        response = Response()
+        
+        response.set_cookie(key="jwt", value=token, httponly=True)
+        response.data = {
+            "jwt": token
+        }
+        
+        return response
+
+@api_view(['POST'])
+def LogoutView(request):
+    if request.method == 'POST':
+        response = Response()
+        response.delete_cookie("jwt")
+        response.data = {
+            "message": "Log Out Successful"
+        }
+        return response
 
 @api_view(['GET', 'POST'])
+# @permission_classes([IsAuthenticatedOrReadOnly])
+# @permission_classes([IsAuthenticated])
 def BorrowingListView(request):
     if request.method == 'GET':
         paramsDict = request.GET
