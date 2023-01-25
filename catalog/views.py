@@ -87,7 +87,8 @@ def UserListView(request):
         else:
             return Response("400 INVALID REQUEST", status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['GET', 'DELETE'])   
+@api_view(['GET', 'DELETE'])
+@permission_classes([IsAuthenticated])
 def UserDetailView(request, username):
     try:
         user = User.objects.get(username=username)
@@ -143,8 +144,7 @@ def LogoutView(request):
         return response
 
 @api_view(['GET', 'POST'])
-# @permission_classes([IsAuthenticatedOrReadOnly])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticatedOrReadOnly])
 def BorrowingListView(request):
     if request.method == 'GET':
         paramsDict = request.GET

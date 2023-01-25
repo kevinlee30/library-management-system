@@ -4,4 +4,4 @@ from catalog.models import Book
 class BookListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Book
-        fields = ['id', 'title', 'author', 'publisher', 'category', 'pubYear', 'imgUrl']
+        fields = ['id', 'title', 'author', 'pubYear', 'imgUrl']

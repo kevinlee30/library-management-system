@@ -3,7 +3,8 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.reverse import reverse_lazy
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 import json
 
 import pandas as pd
@@ -14,17 +15,15 @@ from catalog.models import Book, Borrowing
 from recsys.serializers import BookListSerializer
 
 from uuid import UUID
-
-class UUIDEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, UUID):
-            # if the obj is uuid, we simply return the value of uuid
-            return obj.hex
-        return json.JSONEncoder.default(self, obj)
         
 @api_view(['GET'])
 def SimilarBooksView(request):
     if request.method == 'GET':
+        if request.GET == {}:
+            books = Book.objects.filter(borrowed__gte = 100).order_by('?')[:6]
+            serializer = BookListSerializer(books)
+            return Response(serializer.data, status = status.HTTP_200_OK)
+        
         input_books = request.GET.getlist('id', '')
         
         if input_books == "":
@@ -66,11 +65,16 @@ def SimilarBooksView(request):
                 books = pd.concat([books, common_books.loc[[sorted_sim_books[i][0]]]])
             
             return Response(books.to_dict('record'), status = status.HTTP_200_OK)
-            # return Response(json.dumps(books.to_dict('records'), indent = 4, cls=UUIDEncoder), status = status.HTTP_200_OK)
             
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def RecommendedBooksView(request, username):
     if request.method == 'GET':
+        if username == "":
+            books = Book.objects.all().order_by('-borrowed')[:6]
+            serializer = BookListSerializer(books, many=True)
+            return Response(serializer.data, status = status.HTTP_200_OK)
+        
         borrowed_books = Borrowing.objects.filter(user__username = username).values('book_id')
     
         if len(borrowed_books) == 0:
@@ -116,4 +120,4 @@ def RecommendedBooksView(request, username):
                 books = pd.concat([books, common_books.loc[[sorted_sim_books[i][0]]]])
             
             return Response(books.to_dict('record'), status = status.HTTP_200_OK)
-            # return Response(json.dumps(books.to_dict('records'), indent = 4, cls=UUIDEncoder), status = status.HTTP_200_OK)
+        
