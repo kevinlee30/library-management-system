@@ -43,7 +43,6 @@ INSTALLED_APPS = [
     'recsys.apps.RecsysConfig',
     'rest_framework',
     'rest_framework_simplejwt',
-    'django_filters',
     'corsheaders',
     'django_extensions',
 ]
@@ -135,6 +134,13 @@ USE_TZ = True
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
 STATIC_URL = 'static/'
 
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_USE_TLS = True
+EMAIL_PORT = 587
+EMAIL_HOST_USER = "litbrary.official@gmail.com"
+EMAIL_HOST_PASSWORD = "snktsqtzpwlyjpwa"
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 
@@ -152,9 +158,6 @@ CORS_ALLOW_CREDENTIALS = True
 # Auth jwt settings
 
 REST_FRAMEWORK = {
-    'DEFAULT_FILTER_BACKENDS': [
-        'django_filters.rest_framework.DjangoFilterBackend'
-    ],
     'DEFAULT_AUTHENTICATION_CLASSES': (
         "rest_framework.authentication.BasicAuthentication",
         "rest_framework.authentication.SessionAuthentication",

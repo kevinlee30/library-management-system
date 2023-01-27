@@ -1,6 +1,6 @@
 from django.shortcuts import render
-from django.http import HttpResponse, JsonResponse
-from rest_framework.parsers import JSONParser
+from django.conf import settings
+from django.core.mail import send_mail
 
 from rest_framework import status
 from rest_framework.views import APIView
@@ -8,14 +8,12 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse_lazy
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
-from rest_framework.exceptions import AuthenticationFailed
+
 from django.db.models import Q
-import jwt, datetime
 
 from .models import *
 from .serializers import *
-
-from rest_framework import viewsets
+from .copywrite.email import newUserEmail, newBorrowingEmail
 
 class home(APIView):
     def get(self, request):
@@ -26,6 +24,8 @@ class home(APIView):
             "User List": reverse_lazy("user-list", request=request),
             "Borrowing List": reverse_lazy("borrowing-list", request=request),
         })
+
+
 
 @api_view(['GET'])
 def RecentReleaseBooksView(request):
@@ -83,6 +83,12 @@ def UserListView(request):
         serializer = AuthUserSerializer(data = request.data)
         if serializer.is_valid():
             serializer.save()
+            copywrite = newUserEmail(serializer.data["username"])
+            subject = copywrite.subject
+            message = copywrite.message
+            email_from = settings.EMAIL_HOST_USER
+            recipient_list = [serializer.data["email"], ]
+            send_mail( subject, message, email_from, recipient_list )
             return Response(serializer.data, status=status.HTTP_201_CREATED)     
         else:
             return Response("400 INVALID REQUEST", status=status.HTTP_400_BAD_REQUEST)
@@ -103,45 +109,6 @@ def UserDetailView(request, username):
         user.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     
-@api_view(['POST'])
-def LoginView(request):
-    if request.method == 'POST':
-        email = request.data["email"]
-        password = request.data["password"]
-        
-        user = User.objects.filter(email=email).first()
-        
-        if user is None:
-            raise AuthenticationFailed("User not Found")
-        if not user.check_password(password):
-            raise AuthenticationFailed("Incorrect Password")
-        
-        payload = {
-            "id": user.id,
-            "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=30),
-            "iat": datetime.datetime.utcnow()
-        }
-        
-        token = jwt.encode(payload, "secret", algorithm='HS256').decode('utf-8')
-        
-        response = Response()
-        
-        response.set_cookie(key="jwt", value=token, httponly=True)
-        response.data = {
-            "jwt": token
-        }
-        
-        return response
-
-@api_view(['POST'])
-def LogoutView(request):
-    if request.method == 'POST':
-        response = Response()
-        response.delete_cookie("jwt")
-        response.data = {
-            "message": "Log Out Successful"
-        }
-        return response
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticatedOrReadOnly])
@@ -166,6 +133,13 @@ def BorrowingListView(request):
             book = Book.objects.get(id=serializer.data['book'])
             book.borrowed += 1
             book.save(update_fields=['borrowed'])
+            user = User.objects.get(username=serializer.data["user"])
+            copywrite = newBorrowingEmail(serializer.data["user"], serializer.data["id"], book.title, serializer.data["startDate"], serializer.data["endDate"])
+            subject = copywrite.subject
+            message = copywrite.message
+            email_from = settings.EMAIL_HOST_USER
+            recipient_list = [user.email, ]
+            send_mail( subject, message, email_from, recipient_list )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
             
         else:

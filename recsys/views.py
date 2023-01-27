@@ -5,7 +5,6 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse_lazy
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-import json
 
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
@@ -14,21 +13,16 @@ from sklearn.metrics.pairwise import cosine_similarity
 from catalog.models import Book, Borrowing
 from recsys.serializers import BookListSerializer
 
-from uuid import UUID
+from random import sample
         
 @api_view(['GET'])
 def SimilarBooksView(request):
     if request.method == 'GET':
-        if request.GET == {}:
-            books = Book.objects.filter(borrowed__gte = 100).order_by('?')[:6]
-            serializer = BookListSerializer(books)
-            return Response(serializer.data, status = status.HTTP_200_OK)
-        
         input_books = request.GET.getlist('id', '')
         
         if input_books == "":
-            books = Book.objects.all().order_by('-borrowed')[:6]
-            serializer = BookListSerializer(books)
+            books = Book.objects.filter(borrowed__gte = 100).order_by('?')[:6]
+            serializer = BookListSerializer(books, many=True)
             return Response(serializer.data, status = status.HTTP_200_OK)
         
         else:
@@ -57,8 +51,8 @@ def SimilarBooksView(request):
             
             sim_books = list(enumerate(cosine_sim[-1]))
             sorted_sim_books = sorted(sim_books,key=lambda x:x[1],
-                                        reverse=True)[1:6]
-                
+                                        reverse=True)[1:10]
+            sorted_sim_books = sample(sorted_sim_books, 6)
             books = common_books.loc[[sorted_sim_books[0][0]]]
             
             for i in range(1, len(sorted_sim_books)):
@@ -70,15 +64,10 @@ def SimilarBooksView(request):
 @permission_classes([IsAuthenticated])
 def RecommendedBooksView(request, username):
     if request.method == 'GET':
-        if username == "":
-            books = Book.objects.all().order_by('-borrowed')[:6]
-            serializer = BookListSerializer(books, many=True)
-            return Response(serializer.data, status = status.HTTP_200_OK)
-        
         borrowed_books = Borrowing.objects.filter(user__username = username).values('book_id')
     
         if len(borrowed_books) == 0:
-            books = Book.objects.all().order_by('-borrowed')[:6]
+            books = Book.objects.filter(borrowed__gte = 100).order_by('?')[:6]
             serializer = BookListSerializer(books, many=True)
             return Response(serializer.data, status = status.HTTP_200_OK)
         
@@ -112,8 +101,8 @@ def RecommendedBooksView(request, username):
             
             sim_books = list(enumerate(cosine_sim[-1]))
             sorted_sim_books = sorted(sim_books,key=lambda x:x[1],
-                                        reverse=True)[1:6]
-                
+                                        reverse=True)[1:10]
+            sorted_sim_books = sample(sorted_sim_books, 6)
             books = common_books.loc[[sorted_sim_books[0][0]]]
             
             for i in range(1, len(sorted_sim_books)):
